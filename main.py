@@ -24,6 +24,10 @@ def validate(line):
         raise ValueError("entry is empty or only whitespace")
     if "\n" in line or "\r" in line:
         raise ValueError("entry must be a single line")
+    if any(ord(ch) < 0x20 or ord(ch) == 0x7F for ch in line):
+        raise ValueError("entry must not contain control characters")
+    if line != line.strip():
+        raise ValueError("entry must not have leading or trailing whitespace")
     if len(line) > MAX_CHARS:
         raise ValueError(
             "entry is %d characters, over the %d limit" % (len(line), MAX_CHARS)
@@ -34,6 +38,8 @@ def validate(line):
             "entry is %d words, over the %d limit" % (len(words), MAX_WORDS)
         )
     line.encode("utf-8")  # must be valid UTF-8 text
+    if any(ord(ch) > 0x7E for ch in line):
+        raise ValueError("entry must be plain ASCII text")
     return line
 
 
@@ -43,8 +49,11 @@ def main():
     os.makedirs("/output", exist_ok=True)
     # Plain open(), never tempfile.mkstemp: mkstemp forces mode 0600, and a
     # grader running as a different user could not read the output file.
+    content = line + "\n"
+    if not content.endswith("\n") or content.endswith("\n\n"):
+        raise ValueError("output must end with exactly one trailing newline")
     with open(out_path, "w", encoding="utf-8") as f:
-        f.write(line + "\n")
+        f.write(content)
     os.chmod(out_path, 0o644)
     print("wrote %d characters (%d words) to %s" % (len(line), len(line.split()), out_path))
 
